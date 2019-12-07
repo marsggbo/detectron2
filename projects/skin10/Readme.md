@@ -37,5 +37,5 @@ python projects/skin10/skin_train_net.py --config-file projects/skin10/config/fa
 
 # todo
 
-- [ ] 训练过程中获取box信息
-- [ ] 待补充
+- [x] 训练过程中获取box信息
+- [x] 下版本测试evaluation

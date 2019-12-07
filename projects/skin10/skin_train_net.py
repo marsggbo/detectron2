@@ -30,7 +30,12 @@ from detectron2.evaluation import (
     CityscapesEvaluator, COCOEvaluator, COCOPanopticEvaluator, DatasetEvaluators, LVISEvaluator,
     PascalVOCDetectionEvaluator, SemSegEvaluator, verify_results)
 from detectron2.modeling import GeneralizedRCNNWithTTA
+from networks.img_acc_evaluator import ImgAccEvaluator
+from config.config import add_skinrcnn_config
+from detectron2.modeling import META_ARCH_REGISTRY
+from networks.rcnn import SkinRCNN
 
+META_ARCH_REGISTRY.register(SkinRCNN)
 register_coco_instances("skin10_train", {}, "datasets/coco/annotations/instances_train2017.json", "datasets/coco/train2017")
 register_coco_instances("skin10_test", {}, "datasets/coco/annotations/instances_test2017.json", "datasets/coco/test2017")
 
@@ -83,6 +88,7 @@ class Trainer(DefaultTrainer):
                     dataset_name, evaluator_type
                 )
             )
+        evaluator_list.append(ImgAccEvaluator)
         if len(evaluator_list) == 1:
             return evaluator_list[0]
         return DatasetEvaluators(evaluator_list)
@@ -110,6 +116,7 @@ def setup(args):
     Create configs and perform basic setups.
     """
     cfg = get_cfg()
+    add_skinrcnn_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
