@@ -44,7 +44,7 @@ class RoiImgHead_Resnet(nn.Module):
         # name = cfg.MODEL.ROI_IMG_HEAD.TYPE
         name = 'resnet50'
         assert name in ['resnet18', 'resnet50', 'resnet101']
-        backbone = eval(f"models.{name}()")
+        backbone = eval(f"models.{name}(pretrained=True)")
         backbone.fc = Identity()
         backbone = list(backbone.children())
         self.stem = nn.Sequential(*backbone[:4])
@@ -88,10 +88,7 @@ class RoiImgHead_Resnet(nn.Module):
 
         losses = self.losses(img_cls_preds, gt_classes)
         if not self.training:
-            return {
-                'img_cls_preds': img_cls_preds,
-                # 'loss': losses
-            }
+            return img_cls_preds
         return img_cls_preds, losses
 
     def extract_features(self, x):

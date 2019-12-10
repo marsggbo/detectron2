@@ -35,7 +35,22 @@ python projects/skin10/skin_train_net.py --config-file projects/skin10/config/fa
 - instances_predictions.pth
 
 
-# todo
+# 版本修改信息
 
-- [x] 训练过程中获取box信息
-- [x] 下版本测试evaluation
+## 2019.12.10
+
+- 修改训练过程中弄存在的bug
+  - `roi_img_head.py`：使用resnet的预训练模型
+- 正常运行inference
+  - 数据：修改测试集数据读入的处理方式
+    - `skin_train_net.py`: 修改Trainer中`build_test_loader`函数
+    - `test_dataset_mapper.py`: 用于指定测试集的数据处理方式，保留了`instances`信息，在最后计算图像分类准确率提供gt_classes
+  - 模型：
+    - `rcnn`: 
+      - 添加了一些注解
+      - inference步骤中结果后处理做了修改，将box预测和图片分类预测结果合并
+  - 结果：
+    - `img_acc_evaluator.py`
+      - 修改process和evaluate函数中的逻辑bug
+- Todo
+  - [ ] 测试多GPU训练

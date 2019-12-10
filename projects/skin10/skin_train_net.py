@@ -23,7 +23,7 @@ import torch
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
-from detectron2.data import MetadataCatalog
+from detectron2.data import MetadataCatalog, build_detection_test_loader
 from detectron2.data.datasets import register_coco_instances
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
 from detectron2.evaluation import (
@@ -34,18 +34,17 @@ from networks.img_acc_evaluator import ImgAccEvaluator
 from config.config import add_skinrcnn_config
 from detectron2.modeling import META_ARCH_REGISTRY
 from networks.rcnn import SkinRCNN
+from test_dataset_mapper import TestDatasetMapper
 
 META_ARCH_REGISTRY.register(SkinRCNN)
 register_coco_instances("skin10_train", {}, "datasets/coco/annotations/instances_train2017.json", "datasets/coco/train2017")
 register_coco_instances("skin10_test", {}, "datasets/coco/annotations/instances_test2017.json", "datasets/coco/test2017")
 
 class Trainer(DefaultTrainer):
-    """
-    We use the "DefaultTrainer" which contains a number pre-defined logic for
-    standard training workflow. They may not work for you, especially if you
-    are working on a new research project. In that case you can use the cleaner
-    "SimpleTrainer", or write your own training loop.
-    """
+
+    @classmethod
+    def build_test_loader(cls, cfg, dataset_name):
+        return build_detection_test_loader(cfg, dataset_name, mapper=TestDatasetMapper(cfg))
 
     @classmethod
     def build_evaluator(cls, cfg, dataset_name, output_folder=None):
@@ -88,7 +87,7 @@ class Trainer(DefaultTrainer):
                     dataset_name, evaluator_type
                 )
             )
-        evaluator_list.append(ImgAccEvaluator)
+        evaluator_list.append(ImgAccEvaluator(dataset_name, cfg, True, output_folder))
         if len(evaluator_list) == 1:
             return evaluator_list[0]
         return DatasetEvaluators(evaluator_list)

@@ -27,10 +27,11 @@ class ImgAccEvaluator(DatasetEvaluator):
     def process(self, inputs, outputs):
 
         for input, output in zip(inputs, outputs):
-            if 'img_cls_preds' in output:
-                self._gt_classes.append(input['image_id'])
-                img_cls_preds = output['img_cls_preds'].to(self._cpu_device)
-                self._pred_classes.append(img_cls_preds)
+
+            if 'img_cls_pred' in output:
+                self._gt_classes.append(input['instances'].gt_classes[0])
+                img_cls_pred = output['img_cls_pred'].to(self._cpu_device)
+                self._pred_classes.append(img_cls_pred)
 
     def evaluate(self):
         if self._distributed:
@@ -48,12 +49,12 @@ class ImgAccEvaluator(DatasetEvaluator):
         if self._output_dir:
             PathManager.mkdirs(self._output_dir)
             file_path = os.path.join(self._output_dir, "imgCls_gt_pred.pth")
-            acc_results = topk_acc(self._pred_classes, self._gt_classes, 
+            acc_results = topk_acc(torch.stack(self._pred_classes), torch.tensor(self._gt_classes), 
                     (1, self._topk_acc))
             
             imgCls_gt_pred = {
                 'gt_classes': torch.tensor(self._gt_classes),
-                'pred_classes': torch.tensor(self._pred_classes),
+                'pred_classes': torch.stack(self._pred_classes),
                 'top1_acc': acc_results[0],
                 f"top{self._topk_acc}_acc": acc_results[1]
             }
@@ -62,8 +63,10 @@ class ImgAccEvaluator(DatasetEvaluator):
                 torch.save(imgCls_gt_pred, f)
 
         self._results = OrderedDict()
-        self._results['top1_acc'] = acc_results[0]
-        self._results[f'top{self._topk_acc}_acc'] = acc_results[1]
+        self._results['img_cls'] = {
+            'top1_acc': acc_results[0],
+            f'top{self._topk_acc}_acc': acc_results[1]
+        }
         self._logger.info(f"top1_acc={acc_results[0]:.2f} top{self._topk_acc}_acc={acc_results[1]:.2f}")
         # Copy so the caller can do whatever with results
         return copy.deepcopy(self._results)

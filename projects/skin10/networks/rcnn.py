@@ -45,7 +45,9 @@ class SkinRCNN(GeneralizedRCNN):
         if not self.training:
             return self.inference(batched_inputs)
 
-        images = self.preprocess_image(batched_inputs)
+        # images是等比例缩放后的大小，具体大小设置是由INPUT.MIN_SIZE_TRAIN参数设置
+        # 所以后面预测的box大小其实也是缩放后的，因此不影响计算结果
+        images = self.preprocess_image(batched_inputs) 
         if "instances" in batched_inputs[0]:
             gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
         elif "targets" in batched_inputs[0]:
@@ -78,6 +80,7 @@ class SkinRCNN(GeneralizedRCNN):
 
         softmasks = []
         for p in proposals:
+            # box: [x1,y1,x2,y2]
             boxes = p.proposal_boxes[:self.num_boxes]
             softmasks.append(boxes)
         
@@ -135,17 +138,18 @@ class SkinRCNN(GeneralizedRCNN):
             softmasks.append(boxes)
         
         img_preds =  self.roi_img_head(images.tensor, gt_classes, softmasks)
-        results.update(img_preds)
 
         if do_postprocess:
             processed_results = []
-            for results_per_image, input_per_image, image_size in zip(
-                results, batched_inputs, images.image_sizes
+            for results_per_image, img_cls_per_image, input_per_image, image_size in zip(
+                results, img_preds, batched_inputs, images.image_sizes
             ):
                 height = input_per_image.get("height", image_size[0])
                 width = input_per_image.get("width", image_size[1])
-                r = detector_postprocess(results_per_image, height, width)
-                processed_results.append({"instances": r})
+                # 因为前面预测的box大小是基于缩放后的image得到的，所以这里需要将box变换回到对应原图的大小
+                rpi = detector_postprocess(results_per_image, height, width)
+                ipi = img_cls_per_image
+                processed_results.append({"instances": rpi, "img_cls_pred": ipi})
             return processed_results
         else:
             return results
